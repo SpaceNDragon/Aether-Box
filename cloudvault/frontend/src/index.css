@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --tracking-tight: -0.02em;
+  --tracking-normal: -0.01em;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
+  background-color: #FAFAFC;
+  color: #1D1D1F;
+}
+
+.dark body {
+  background-color: #000000;
+  color: #F5F5F7;
+}
+
+/* Apple Glass Effect */
+.glass {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.dark .glass {
+  background: rgba(30, 30, 30, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Animation utilities */
+.animate-in {
+  animation: fadeIn 0.25s ease-out, slideUp 0.25s ease-out;
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid #0071E3;
+  outline-offset: 2px;
+}
+
+@layer components {
+  /* Button base */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-full font-medium transition-all duration-150;
+    @apply hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark shadow-apple-sm;
+  }
+
+  .btn-secondary {
+    @apply glass text-text-primary-light dark:text-text-primary-dark;
+    @apply hover:bg-gray-200/50 dark:hover:bg-white/10 shadow-apple-sm border border-border-light/20 dark:border-border-dark/20;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-text-secondary-light dark:text-text-secondary-dark;
+    @apply hover:bg-gray-100 dark:hover:bg-surface-elevated-dark;
+  }
+
+  .btn-danger {
+    @apply bg-error-light dark:bg-error-dark text-white shadow-apple-sm;
+  }
+
+  /* Card styles */
+  .card {
+    @apply glass rounded-apple-xl shadow-apple-sm;
+    @apply border border-border-light/20 dark:border-border-dark/20;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+
+  /* Input styles */
+  .input {
+    @apply w-full px-4 py-3 rounded-apple-lg glass;
+    @apply border border-border-light/20 dark:border-border-dark/20;
+    @apply text-text-primary-light dark:text-text-primary-dark;
+    @apply placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+    @apply transition-all duration-200;
+  }
+
+  /* File type icons */
+  .file-icon {
+    @apply w-12 h-12 flex items-center justify-center rounded-apple-md;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    @apply h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden;
+  }
+
+  .progress-bar-fill {
+    @apply h-full bg-primary rounded-full transition-all duration-300;
+  }
+}
