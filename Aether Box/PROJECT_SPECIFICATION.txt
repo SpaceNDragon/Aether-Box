@@ -1,0 +1,546 @@
+================================================================================
+                     CLOUDVAULT - PROJECT SPECIFICATION
+                 For DFD, ER Diagram & College Mini-Project Report
+================================================================================
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+Project Name: CloudVault
+Type: Full-Stack Cloud Storage Web Application
+
+Description: A cloud-based file management system allowing users to store, organize,
+share, and manage their files and folders in a secure online environment.
+
+Technology Stack:
+- Frontend: React.js + Vite + Tailwind CSS
+- Backend: Node.js + Express.js
+- Database: SQLite (better-sqlite3)
+- Cloud Storage: Cloudinary (for file storage)
+- Authentication: JWT + bcryptjs
+
+================================================================================
+2. EXTERNAL ENTITIES (ACTORS)
+================================================================================
+
+1. USER
+   - Registers for an account
+   - Logs in to access files
+   - Uploads/Downloads files
+   - Creates folders
+   - Shares files with others
+   - Manages trash
+
+2. GUEST USER (External)
+   - Can access shared public files via link
+   - May need PIN for protected shares
+
+3. CLOUDINARY (External System)
+   - Stores actual file content
+   - Provides CDN URLs
+
+================================================================================
+3. DATA STORES (DATABASE TABLES)
+================================================================================
+
+TABLE: users
+-----------------
+| Field                | Type      | Description                    |
+|---------------------|-----------|--------------------------------|
+| id                  | INTEGER   | Primary key (auto-increment)  |
+| email               | TEXT      | Unique user email              |
+| password           | TEXT      | Hashed password               |
+| name               | TEXT      | User display name             |
+| avatar             | TEXT      | Profile image URL            |
+| storageUsed        | INTEGER   | Bytes used (default: 0)      |
+| storageLimit       | INTEGER   | 25GB default limit           |
+| isTwoFactorEnabled | INTEGER   | 0 or 1 flag                 |
+| twoFactorSecret    | TEXT      | 2FA secret key               |
+| createdAt          | TEXT      | Timestamp                    |
+| updatedAt          | TEXT      | Timestamp                    |
+
+TABLE: folders
+-----------------
+| Field                | Type      | Description                    |
+|---------------------|-----------|--------------------------------|
+| id                  | INTEGER   | Primary key                   |
+| userId              | INTEGER   | FK to users.id                |
+| name               | TEXT      | Folder name                   |
+| parentId           | INTEGER   | FK to folders.id (self-ref)   |
+| path               | TEXT      | Full path (e.g., "/documents/") |
+| deletedAt          | TEXT      | Soft delete timestamp          |
+| createdAt          | TEXT      | Timestamp                    |
+| updatedAt          | TEXT      | Timestamp                    |
+
+TABLE: files
+-----------------
+| Field                | Type      | Description                    |
+|---------------------|-----------|--------------------------------|
+| id                  | INTEGER   | Primary key                   |
+| userId              | INTEGER   | FK to users.id                |
+| name               | TEXT      | File name                    |
+| originalName       | TEXT      | Original upload name          |
+| mimeType          | TEXT      | MIME type (e.g., image/png)  |
+| size              | INTEGER   | File size in bytes            |
+| cloudinaryId       | TEXT      | Cloudinary public ID         |
+| cloudinaryUrl     | TEXT      | Cloudinary secure URL       |
+| folderId          | INTEGER   | FK to folders.id             |
+| isPublic          | INTEGER   | 0 or 1 flag               |
+| shareLink         | TEXT      | Share token                 |
+| shareLinkExpiry   | TEXT      | Expiry date                 |
+| sharePin         | TEXT      | 4-digit PIN                |
+| deletedAt          | TEXT      | Soft delete timestamp        |
+| createdAt          | TEXT      | Timestamp                    |
+| updatedAt          | TEXT      | Timestamp                    |
+
+TABLE: file_versions
+-----------------
+| Field                | Type      | Description                    |
+|---------------------|-----------|--------------------------------|
+| id                  | INTEGER   | Primary key                   |
+| fileId             | INTEGER   | FK to files.id                |
+| userId              | INTEGER   | FK to users.id                |
+| versionNumber      | INTEGER   | Version number (1, 2, 3...) |
+| cloudinaryId       | TEXT      | Cloudinary public ID         |
+| cloudinaryUrl     | TEXT      | Cloudinary URL             |
+| size              | INTEGER   | File size                   |
+| createdAt          | TEXT      | Timestamp                    |
+
+================================================================================
+4. API ENDPOINTS (PROCESSES)
+================================================================================
+
+AUTH ROUTES (/api/auth)
+---------------------
+POST /api/auth/register
+   - Input: { email, password, name }
+   - Output: { token, user }
+   - Creates new user account
+
+POST /api/auth/login
+   - Input: { email, password }
+   - Output: { token, user }
+   - Authenticates user
+
+GET /api/auth/me
+   - Headers: Authorization: Bearer <token>
+   - Output: { user data }
+   - Get current user info
+
+PUT /api/auth/profile
+   - Input: { name, avatar }
+   - Output: { updated user }
+   - Update profile
+
+PUT /api/auth/reset-password
+   - Input: { currentPassword, newPassword }
+   - Output: { success message }
+   - Change password
+
+POST /api/auth/toggle-2fa
+   - Input: { enabled: boolean }
+   - Output: { user }
+   - Enable/disable 2FA
+
+
+FILES ROUTES (/api/files)
+---------------------
+GET /api/files
+   - Query: ?folderId=<id>
+   - Output: [files array]
+   - Get user's files
+
+GET /api/files/analytics
+   - Output: { image, video, audio, document, other }
+   - Get storage analytics
+
+POST /api/files/upload
+   - Body: FormData with 'file'
+   - Output: { uploaded file }
+   - Upload single file
+
+POST /api/files/upload-multiple
+   - Body: FormData with 'files' (max 10)
+   - Output: [files array]
+   - Batch upload
+
+POST /api/files/note
+   - Input: { title, content, folderId }
+   - Output: { file }
+   - Create markdown note
+
+GET /api/files/:id
+   - Output: { file }
+   - Get file details
+
+PUT /api/files/:id
+   - Input: { name, content }
+   - Output: { updated file }
+   - Rename file or update content
+
+PUT /api/files/:id/move
+   - Input: { folderId }
+   - Output: { updated file }
+   - Move file to folder
+
+DELETE /api/files/:id
+   - Output: { success message }
+   - Permanently delete file
+
+GET /api/files/:id/download
+   - Output: { downloadUrl, fileName }
+   - Get download URL
+
+GET /api/files/:id/versions
+   - Output: [versions array]
+   - Get file version history
+
+POST /api/files/:id/versions/:versionId/restore
+   - Output: { success }
+   - Restore previous version
+
+POST /api/files/:id/share
+   - Input: { expiryDays, pin }
+   - Output: { shareLink, expiresAt }
+   - Create share link
+
+GET /api/files/shared/:token
+   - Query: ?pin=<4digit>
+   - Output: { file data }
+   - Access shared file
+
+GET /api/files/duplicate
+   - Query: ?name=&folderId=
+   - Output: { isDuplicate, existingFile }
+
+DELETE /api/files/bulk
+   - Input: { fileIds: [] }
+   - Output: { deletedCount }
+
+
+TRASH ROUTES
+---------------------
+GET /api/files/trash
+   - Output: { files, folders }
+   - Get trashed items
+
+DELETE /api/files/trash/:id
+   - Output: { message }
+   - Move to trash
+
+DELETE /api/files/trash/:id/restore
+   - Output: { message }
+   - Restore from trash
+
+DELETE /api/files/trash/empty
+   - Output: { message }
+   - Empty trash
+
+
+FOLDERS ROUTES (/api/folders)
+---------------------
+GET /api/folders
+   - Query: ?parentId=<id>
+   - Output: [folders array]
+   - Get folders
+
+POST /api/folders
+   - Input: { name, parentId }
+   - Output: { created folder }
+   - Create folder
+
+GET /api/folders/:id
+   - Output: { folder }
+   - Get folder
+
+PUT /api/folders/:id
+   - Input: { name }
+   - Output: { updated folder }
+   - Rename folder
+
+DELETE /api/folders/:id
+   - Output: { message }
+   - Move folder to trash
+
+GET /api/folders/:id/contents
+   - Output: { folder, folders, files }
+   - Get folder contents
+
+GET /api/folders/:id/breadcrumbs
+   - Output: [{ _id, name }]
+   - Get breadcrumb path
+
+POST /api/folders/:id/restore
+   - Output: { message }
+   - Restore folder
+
+
+SEARCH ROUTES (/api/search)
+---------------------
+GET /api/search?q=<query>
+   - Output: { files, folders }
+   - Search files and folders
+
+
+================================================================================
+5. DATA FLOW PROCESSES (ACTIVITIES)
+================================================================================
+
+1. USER AUTHENTICATION
+   User -> REGISTER -> [Validate Input] -> [Hash Password] -> [Save to DB] -> JWT Token
+
+   User -> LOGIN -> [Verify Email] -> [Compare Password] -> JWT Token
+
+2. FILE UPLOAD
+   User -> UPLOAD REQUEST -> [Check Storage Limit] -> [Upload to Cloudinary]
+   -> [Save Metadata to DB] -> [Update User Storage] -> SUCCESS
+
+3. FILE MANAGEMENT
+   User -> VIEW FILES -> [Query DB] -> Display
+   User -> RENAME FILE -> [Update DB] -> SUCCESS
+   User -> DELETE FILE -> [Soft Delete] -> [Update Storage] -> TRASH
+   User -> PERMANENT DELETE -> [Delete from Cloudinary + DB]
+
+4. FOLDER MANAGEMENT
+   User -> CREATE FOLDER -> [Check Duplicate] -> [Save to DB]
+   User -> MOVE TO TRASH -> [Recursively move contents] -> Soft Delete
+
+5. FILE SHARING
+   User -> SHARE FILE -> [Generate Token] -> [Set Expiry/PIN] -> [Save]
+   -> Return Share Link
+   Guest -> ACCESS SHARED LINK -> [Check Expiry] -> [Check PIN] -> [Return File URL]
+
+6. SEARCH
+   User -> SEARCH -> [Query Files + Folders] -> [Filter Results] -> Display
+
+================================================================================
+6. ER DIAGRAM ENTITIES RELATIONSHIPS
+================================================================================
+
+User (1) ----< (N) File
+User (1) ----< (N) Folder
+Folder (1) ----< (N) Folder  [self-referencing hierarchy]
+Folder (1) ----< (N) File
+File (1) ----< (N) FileVersion
+
+CARDINALITY:
+- One User has Many Folders
+- One User has Many Files
+- One Folder has Many Files (files inside folder)
+- One Folder has Many Folders (subfolders)
+- One File has Many Versions (file history)
+
+================================================================================
+7. DFD LEVEL 0 (CONTEXT DIAGRAM)
+================================================================================
+
+                    +------------------+
+                    |                  |
+    [USER]---------->|   CLOUDVAULT     |<----------[CLOUDINARY]
+    (External)      |     SYSTEM       |        (External)
+                    |                  |
+                    |  - Auth          |
+                    |  - File Upload   |
+                    |  - Folders       |
+                    |  - Sharing       |
+                    |                  |
+                    +------------------+
+                           |
+                           v
+                    +------------------+
+                    |    DATABASE     |
+                    |   (SQLite)      |
+                    +------------------+
+
+
+================================================================================
+8. DFD LEVEL 1 (PROCESS DECOMPOSITION)
+================================================================================
+
+       [USER]
+           |
+           v
+    +------------+
+    | 1. AUTH   |<-----------[JWT Token]
+    | Login/    |
+    | Register  |
+    +------------+
+          |
+          v
+    +------------+
+    | 2. FILE   |
+    | Manager   |
+    +------------+
+    | Upload   |
+    | Download|
+    | Delete  |
+    | Share   |
+    +------------+
+          |
+          +--------->[CLOUDINARY]
+          |
+          v
+    +------------+
+    | 3. FOLDER |
+    | Manager   |
+    +------------+
+          |
+          v
+    +------------+
+    | 4. SEARCH|
+    |           |
+    +------------+
+
+
+================================================================================
+9. SYSTEM FEATURES SUMMARY
+================================================================================
+
+AUTHENTICATION:
+- User registration with email/password
+- JWT-based authentication
+- Password hashing with bcrypt
+- Two-Factor Authentication support (2FA)
+- Profile management
+
+FILE MANAGEMENT:
+- Single and batch file upload
+- File preview (images, videos, PDFs)
+- Markdown note creation
+- File renaming and editing
+- File moving between folders
+- Bulk file operations
+- File duplication check
+
+STORAGE:
+- 25GB default storage per user
+- Storage usage tracking
+- Storage analytics by file type
+- Automatic storage limit enforcement
+
+SHARING:
+- Generate shareable links
+- Link expiration (1-365 days)
+- Optional 4-digit PIN protection
+
+VERSION CONTROL:
+- File version history
+- Restore previous versions
+
+TRASH/RECYCLE BIN:
+- Soft delete (move to trash)
+- Restore from trash
+- Empty trash
+- Bulk trash operations
+
+FOLDER MANAGEMENT:
+- Create nested folders
+- Folder hierarchy/breadcrumbs
+- Rename folders
+- Move folders to trash (recursive)
+
+SEARCH:
+- Search files by name
+- Search folders by name
+- Combined results
+
+================================================================================
+10. USE CASE DIAGRAM ENTITIES
+================================================================================
+
+ACTOR: User
+  UC1: Register Account
+  UC2: Login/Logout
+  UC3: View Profile
+  UC4: Update Profile
+  UC5: Reset Password
+  UC6: Enable/Disable 2FA
+
+  UC7: Upload File
+  UC8: Download File
+  UC9: Preview File
+  UC10: Rename File
+  UC11: Move File
+  UC12: Delete File (to trash)
+  UC13: Permanently Delete
+  UC14: Bulk Delete
+  UC15: View File Versions
+  UC16: Restore Version
+
+  UC17: Create Folder
+  UC18: Rename Folder
+  UC19: Delete Folder
+  UC20: Navigate Folders
+
+  UC21: Share File
+  UC22: Access Shared File
+
+  UC23: Search Files
+  UC24: Search Folders
+
+  UC25: View Trash
+  UC26: Restore from Trash
+  UC27: Empty Trash
+  UC28: View Storage Analytics
+
+  UC29: Create Note
+  UC30: Edit Note
+
+================================================================================
+11. PROJECT STRUCTURE
+================================================================================
+
+cloudvault/
+├── backend/
+│   ├── config/
+│   │   └── db.js           (SQLite setup)
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── fileController.js
+│   │   ├── folderController.js
+│   │   └── searchController.js
+│   ├── middleware/
+│   │   ├── auth.js         (JWT auth)
+│   │   └── upload.js      (Multer + Cloudinary)
+│   ├── models/
+│   │   ├── index.js       (DB queries)
+│   │   ├── User.js
+│   │   ├── File.js
+│   │   └── Folder.js
+│   ├── routes/
+│   │   ├── auth.js
+│   │   ├── files.js
+│   │   ├── folders.js
+│   │   └── search.js
+│   ├── server.js           (Express app)
+│   └── package.json
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── common/      (modals)
+│   │   │   ├── files/       (file UI)
+│   │   │   ├── folders/     (folder UI)
+│   │   │   └── layout/      (header, sidebar)
+│   │   ├── context/       (React context)
+│   │   ├── pages/
+│   │   │   ├── Auth.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Files.jsx
+│   │   │   ├── Settings.jsx
+│   │   │   ├── Trash.jsx
+│   │   │   ├── Network.jsx
+│   │   │   ├── Analytics.jsx
+│   │   │   └── Notes.jsx
+│   │   ├── services/
+│   │   │   └── api.js     (API calls)
+│   │   └── App.jsx
+│   └── package.json
+│
+└── README.md
+
+
+================================================================================
+                              END OF SPECIFICATION
+================================================================================
